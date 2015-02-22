@@ -1,0 +1,17 @@
+language: go
+
+go: 1.4
+
+notifications:
+    email: false
+
+env:
+    - PATH=$HOME/gopath/bin:$PATH
+
+install:
+    # Install go tools used by gok.sh
+    - go get golang.org/x/tools/cmd/vet
+    - go get github.com/golang/lint/golint
+    - go get -d -v ./... && go build -v ./...
+
+script: ./gok.sh
