@@ -57,16 +57,6 @@ func Pt(x, y int) geom.Point {
 	}
 }
 
-// Hinting is the policy for snapping a glyph's contours to pixel boundaries.
-type Hinting int32
-
-const (
-	// NoHinting means to not perform any hinting.
-	NoHinting = Hinting(truetype.NoHinting)
-	// FullHinting means to use the font's hinting instructions.
-	FullHinting = Hinting(truetype.FullHinting)
-)
-
 // A Context holds the state for drawing text in a given font and size.
 type Context struct {
 	r        *raster.Rasterizer
@@ -81,7 +71,6 @@ type Context struct {
 	// 26.6 fixed point units in 1 em. hinting is the hinting policy.
 	fontSize, dpi float64
 	scale         int32
-	hinting       Hinting
 	// cache is the glyph cache.
 	cache [nGlyphs * nXFractions * nYFractions]cacheEntry
 }
@@ -145,7 +134,7 @@ func (c *Context) drawContour(ps []truetype.Point, dx, dy geom.Fix32) {
 func (c *Context) rasterize(glyph truetype.Index, fx, fy geom.Fix32) (
 	geom.Fix32, *image.Alpha, image.Point, error) {
 
-	if err := c.glyphBuf.Load(c.font, c.scale, glyph, truetype.Hinting(c.hinting)); err != nil {
+	if err := c.glyphBuf.Load(c.font, c.scale, glyph); err != nil {
 		return 0, nil, image.Point{}, err
 	}
 	// Calculate the integer-pixel bounds for the glyph.
@@ -219,9 +208,6 @@ func (c *Context) DrawString(s string, p geom.Point) (geom.Point, error) {
 		index := c.font.Index(rune)
 		if hasPrev {
 			kern := geom.Fix32(c.font.Kerning(c.scale, prev, index)) << 2
-			if c.hinting != NoHinting {
-				kern = (kern + 128) &^ 255
-			}
 			p.X += kern
 		}
 		advanceWidth, mask, offset, err := c.glyph(index, p)
@@ -285,14 +271,6 @@ func (c *Context) SetFontSize(fontSize float64) {
 	}
 	c.fontSize = fontSize
 	c.recalc()
-}
-
-// SetHinting sets the hinting policy.
-func (c *Context) SetHinting(hinting Hinting) {
-	c.hinting = hinting
-	for i := range c.cache {
-		c.cache[i] = cacheEntry{}
-	}
 }
 
 // SetDst sets the destination image for draw operations.

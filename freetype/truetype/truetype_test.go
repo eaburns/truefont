@@ -1,3 +1,5 @@
+// © 2015 The truefont Authors. See AUTHORS file for a list of authors.
+//
 // Copyright 2012 The Freetype-Go Authors. All rights reserved.
 // Use of this source code is governed by your choice of either the
 // FreeType License or the GNU General Public License version 2 (or
@@ -61,7 +63,7 @@ func TestParse(t *testing.T) {
 	}
 
 	g := NewGlyphBuf()
-	err = g.Load(font, fupe, i0, NoHinting)
+	err = g.Load(font, fupe, i0)
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -266,7 +268,7 @@ var scalingTestCases = []struct {
 	{"x-times-new-roman", 13},
 }
 
-func testScaling(t *testing.T, h Hinting) {
+func TestScaling(t *testing.T) {
 	for _, tc := range scalingTestCases {
 		font, testdataIsOptional, err := parseTestdataFont(tc.name)
 		if err != nil {
@@ -277,12 +279,8 @@ func testScaling(t *testing.T, h Hinting) {
 			}
 			continue
 		}
-		hintingStr := "sans"
-		if h != NoHinting {
-			hintingStr = "with"
-		}
 		f, err := os.Open(fmt.Sprintf(
-			"../../testdata/%s-%dpt-%s-hinting.txt", tc.name, tc.size, hintingStr))
+			"../../testdata/%s-%dpt-sans-hinting.txt", tc.name, tc.size))
 		if err != nil {
 			t.Errorf("%s: Open: %v", tc.name, err)
 			continue
@@ -318,7 +316,7 @@ func testScaling(t *testing.T, h Hinting) {
 
 		glyphBuf := NewGlyphBuf()
 		for i, want := range wants {
-			if err = glyphBuf.Load(font, tc.size*64, Index(i), h); err != nil {
+			if err = glyphBuf.Load(font, tc.size*64, Index(i)); err != nil {
 				t.Errorf("%s: glyph #%d: Load: %v", tc.name, i, err)
 				continue
 			}
@@ -355,12 +353,4 @@ func testScaling(t *testing.T, h Hinting) {
 			}
 		}
 	}
-}
-
-func TestScalingSansHinting(t *testing.T) {
-	testScaling(t, NoHinting)
-}
-
-func TestScalingWithHinting(t *testing.T) {
-	testScaling(t, FullHinting)
 }
