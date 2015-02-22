@@ -33,6 +33,11 @@ type Bounds struct {
 	XMin, YMin, XMax, YMax int32
 }
 
+// A FontHMetric hold the horizontal metrics for the font.
+type FontHMetric struct {
+	Ascent, Descent, LineGap int32
+}
+
 // An GlyphHMetric holds the horizontal metrics of a single glyph.
 type GlyphHMetric struct {
 	AdvanceWidth, LeftSideBearing int32
@@ -110,6 +115,7 @@ type Font struct {
 	nGlyph, nHMetric, nKern int
 	fUnitsPerEm             int32
 	bounds                  Bounds
+	hMetric                 FontHMetric
 	// Values from the maxp section.
 	maxTwilightPoints, maxStorage, maxFunctionDefs, maxStackElements uint16
 }
@@ -247,6 +253,9 @@ func (f *Font) parseHhea() error {
 	if len(f.hhea) != 36 {
 		return FormatError(fmt.Sprintf("bad hhea length: %d", len(f.hhea)))
 	}
+	f.hMetric.Ascent = int32(int16(u16(f.hhea, 4)))
+	f.hMetric.Descent = int32(int16(u16(f.hhea, 6)))
+	f.hMetric.LineGap = int32(int16(u16(f.hhea, 8)))
 	f.nHMetric = int(u16(f.hhea, 34))
 	if 4*f.nHMetric+2*(f.nGlyph-f.nHMetric) != len(f.hmtx) {
 		return FormatError(fmt.Sprintf("bad hmtx length: %d", len(f.hmtx)))
@@ -325,6 +334,15 @@ func (f *Font) Bounds(scale int32) Bounds {
 	b.XMax = f.scale(scale * b.XMax)
 	b.YMax = f.scale(scale * b.YMax)
 	return b
+}
+
+// HMetric returns metrics for horizontal fonts.
+func (f *Font) HMetric(scale int32) FontHMetric {
+	m := f.hMetric
+	m.Ascent = f.scale(scale * m.Ascent)
+	m.Descent = f.scale(scale * m.Descent)
+	m.LineGap = f.scale(scale * m.LineGap)
+	return m
 }
 
 // FUnitsPerEm returns the number of FUnits in a Font's em-square's side.

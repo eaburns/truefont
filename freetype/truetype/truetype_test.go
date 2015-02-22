@@ -46,6 +46,9 @@ func TestParse(t *testing.T) {
 	if got, want := font.Bounds(fupe), (Bounds{-441, -432, 2024, 2033}); got != want {
 		t.Errorf("Bounds: got %v, want %v", got, want)
 	}
+	if got, want := font.HMetric(fupe), (FontHMetric{Ascent: 2033, Descent: -432, LineGap: 0}); got != want {
+		t.Errorf("HMetric: got %v, want %v", got, want)
+	}
 
 	i0 := font.Index('A')
 	i1 := font.Index('V')
