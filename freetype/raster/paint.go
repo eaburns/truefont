@@ -1,3 +1,5 @@
+// © 2015 The truefont Authors. See AUTHORS file for a list of authors.
+//
 // Copyright 2010 The Freetype-Go Authors. All rights reserved.
 // Use of this source code is governed by your choice of either the
 // FreeType License or the GNU General Public License version 2 (or
@@ -113,6 +115,8 @@ func NewAlphaSrcPainter(m *image.Alpha) AlphaSrcPainter {
 	return AlphaSrcPainter{m}
 }
 
+// An RGBAPainter implements the Painter interface,
+// painting to an image.RGBA.
 type RGBAPainter struct {
 	// The image to compose onto.
 	Image *image.RGBA
@@ -253,7 +257,7 @@ func (g *GammaCorrectionPainter) Paint(ss []Span, done bool) {
 			M = 0x1010101 // 255*M == 1<<32-1
 			N = 0x8080    // N = M>>9, and N < 1<<16-1
 		)
-		for i, _ := range ss {
+		for i := range ss {
 			if ss[i].A == 0 || ss[i].A == 1<<32-1 {
 				continue
 			}

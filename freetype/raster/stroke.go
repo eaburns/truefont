@@ -1,3 +1,5 @@
+// © 2015 The truefont Authors. See AUTHORS file for a list of authors.
+//
 // Copyright 2010 The Freetype-Go Authors. All rights reserved.
 // Use of this source code is governed by your choice of either the
 // FreeType License or the GNU General Public License version 2 (or
@@ -19,6 +21,7 @@ type Capper interface {
 // The CapperFunc type adapts an ordinary function to be a Capper.
 type CapperFunc func(Adder, Fix32, Point, Point)
 
+// Cap adds a cap to a pivot point.
 func (f CapperFunc) Cap(p Adder, halfWidth Fix32, pivot, n1 Point) {
 	f(p, halfWidth, pivot, n1)
 }
@@ -34,6 +37,7 @@ type Joiner interface {
 // The JoinerFunc type adapts an ordinary function to be a Joiner.
 type JoinerFunc func(lhs, rhs Adder, halfWidth Fix32, pivot, n0, n1 Point)
 
+// Join joins two sides of a stroked path.
 func (f JoinerFunc) Join(lhs, rhs Adder, halfWidth Fix32, pivot, n0, n1 Point) {
 	f(lhs, rhs, halfWidth, pivot, n0, n1)
 }
@@ -302,7 +306,6 @@ func (k *stroker) addNonCurvy2(b, c Point) {
 		t--
 		anorm = cnorm
 	}
-	panic("unreachable")
 }
 
 // Add1 adds a linear segment to the stroker.

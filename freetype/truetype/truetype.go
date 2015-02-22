@@ -1,3 +1,5 @@
+// © 2015 The truefont Authors. See AUTHORS file for a list of authors.
+//
 // Copyright 2010 The Freetype-Go Authors. All rights reserved.
 // Use of this source code is governed by your choice of either the
 // FreeType License or the GNU General Public License version 2 (or
@@ -336,13 +338,14 @@ func (f *Font) Index(x rune) Index {
 	for i, j := 0, len(f.cm); i < j; {
 		h := i + (j-i)/2
 		cm := &f.cm[h]
-		if c < cm.start {
+		switch {
+		case c < cm.start:
 			j = h
-		} else if cm.end < c {
+		case cm.end < c:
 			i = h + 1
-		} else if cm.offset == 0 {
+		case cm.offset == 0:
 			return Index(c + cm.delta)
-		} else {
+		default:
 			offset := int(cm.offset) + 2*(h-len(f.cm)+int(c-cm.start))
 			return Index(u16(f.cmapIndexes, offset))
 		}

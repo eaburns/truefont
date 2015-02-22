@@ -1,9 +1,11 @@
+// © 2015 The truefont Authors. See AUTHORS file for a list of authors.
+//
 // Copyright 2010 The Freetype-Go Authors. All rights reserved.
 // Use of this source code is governed by your choice of either the
 // FreeType License or the GNU General Public License version 2 (or
 // any later version), both of which can be found in the LICENSE file.
 
-// The raster package provides an anti-aliasing 2-D rasterizer.
+// Package raster provides an anti-aliasing 2-D rasterizer.
 //
 // It is part of the larger Freetype-Go suite of font-related packages,
 // but the raster package is not specific to font rasterization, and can
@@ -27,6 +29,7 @@ type cell struct {
 	next        int
 }
 
+// A Rasterizer performs 2-D anti-aliased rasterizing to images.
 type Rasterizer struct {
 	// If false, the default behavior is to use the even-odd winding fill
 	// rule during Rasterize.
@@ -151,7 +154,7 @@ func (r *Rasterizer) scan(yi int, x0, y0f, x1, y1f Fix32) {
 	}
 	yDelta, yRem := p/q, p%q
 	if yRem < 0 {
-		yDelta -= 1
+		yDelta--
 		yRem += q
 	}
 	// Do the first cell.
@@ -165,7 +168,7 @@ func (r *Rasterizer) scan(yi int, x0, y0f, x1, y1f Fix32) {
 		p = 256 * (y1f - y + yDelta)
 		fullDelta, fullRem := p/q, p%q
 		if fullRem < 0 {
-			fullDelta -= 1
+			fullDelta--
 			fullRem += q
 		}
 		yRem -= q
@@ -173,7 +176,7 @@ func (r *Rasterizer) scan(yi int, x0, y0f, x1, y1f Fix32) {
 			yDelta = fullDelta
 			yRem += fullRem
 			if yRem >= 0 {
-				yDelta += 1
+				yDelta++
 				yRem -= q
 			}
 			r.area += int(256 * yDelta)
@@ -262,7 +265,7 @@ func (r *Rasterizer) Add1(b Point) {
 		}
 		xDelta, xRem := p/q, p%q
 		if xRem < 0 {
-			xDelta -= 1
+			xDelta--
 			xRem += q
 		}
 		// Do the first scanline.
@@ -275,7 +278,7 @@ func (r *Rasterizer) Add1(b Point) {
 			p = 256 * dx
 			fullDelta, fullRem := p/q, p%q
 			if fullRem < 0 {
-				fullDelta -= 1
+				fullDelta--
 				fullRem += q
 			}
 			xRem -= q
@@ -283,7 +286,7 @@ func (r *Rasterizer) Add1(b Point) {
 				xDelta = fullDelta
 				xRem += fullRem
 				if xRem >= 0 {
-					xDelta += 1
+					xDelta++
 					xRem -= q
 				}
 				r.scan(yi, x, edge0, x+xDelta, edge1)
