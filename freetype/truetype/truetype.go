@@ -33,13 +33,13 @@ type Bounds struct {
 	XMin, YMin, XMax, YMax int32
 }
 
-// An HMetric holds the horizontal metrics of a single glyph.
-type HMetric struct {
+// An GlyphHMetric holds the horizontal metrics of a single glyph.
+type GlyphHMetric struct {
 	AdvanceWidth, LeftSideBearing int32
 }
 
-// A VMetric holds the vertical metrics of a single glyph.
-type VMetric struct {
+// A GlyphVMetric holds the vertical metrics of a single glyph.
+type GlyphVMetric struct {
 	AdvanceHeight, TopSideBearing int32
 }
 
@@ -353,43 +353,43 @@ func (f *Font) Index(x rune) Index {
 	return 0
 }
 
-// unscaledHMetric returns the unscaled horizontal metrics for the glyph with
+// unscaledGlyphHMetric returns the unscaled horizontal metrics for the glyph with
 // the given index.
-func (f *Font) unscaledHMetric(i Index) (h HMetric) {
+func (f *Font) unscaledGlyphHMetric(i Index) (h GlyphHMetric) {
 	j := int(i)
 	if j < 0 || f.nGlyph <= j {
-		return HMetric{}
+		return GlyphHMetric{}
 	}
 	if j >= f.nHMetric {
 		p := 4 * (f.nHMetric - 1)
-		return HMetric{
+		return GlyphHMetric{
 			AdvanceWidth:    int32(u16(f.hmtx, p)),
 			LeftSideBearing: int32(int16(u16(f.hmtx, p+2*(j-f.nHMetric)+4))),
 		}
 	}
-	return HMetric{
+	return GlyphHMetric{
 		AdvanceWidth:    int32(u16(f.hmtx, 4*j)),
 		LeftSideBearing: int32(int16(u16(f.hmtx, 4*j+2))),
 	}
 }
 
-// HMetric returns the horizontal metrics for the glyph with the given index.
-func (f *Font) HMetric(scale int32, i Index) HMetric {
-	h := f.unscaledHMetric(i)
+// GlyphHMetric returns the horizontal metrics for the glyph with the given index.
+func (f *Font) GlyphHMetric(scale int32, i Index) GlyphHMetric {
+	h := f.unscaledGlyphHMetric(i)
 	h.AdvanceWidth = f.scale(scale * h.AdvanceWidth)
 	h.LeftSideBearing = f.scale(scale * h.LeftSideBearing)
 	return h
 }
 
-// unscaledVMetric returns the unscaled vertical metrics for the glyph with
+// unscaledGlyphVMetric returns the unscaled vertical metrics for the glyph with
 // the given index. yMax is the top of the glyph's bounding box.
-func (f *Font) unscaledVMetric(i Index, yMax int32) (v VMetric) {
+func (f *Font) unscaledGlyphVMetric(i Index, yMax int32) (v GlyphVMetric) {
 	j := int(i)
 	if j < 0 || f.nGlyph <= j {
-		return VMetric{}
+		return GlyphVMetric{}
 	}
 	if 4*j+4 <= len(f.vmtx) {
-		return VMetric{
+		return GlyphVMetric{
 			AdvanceHeight:  int32(u16(f.vmtx, 4*j)),
 			TopSideBearing: int32(int16(u16(f.vmtx, 4*j+2))),
 		}
@@ -402,21 +402,21 @@ func (f *Font) unscaledVMetric(i Index, yMax int32) (v VMetric) {
 	if len(f.os2) >= 72 {
 		sTypoAscender := int32(int16(u16(f.os2, 68)))
 		sTypoDescender := int32(int16(u16(f.os2, 70)))
-		return VMetric{
+		return GlyphVMetric{
 			AdvanceHeight:  sTypoAscender - sTypoDescender,
 			TopSideBearing: sTypoAscender - yMax,
 		}
 	}
-	return VMetric{
+	return GlyphVMetric{
 		AdvanceHeight:  f.fUnitsPerEm,
 		TopSideBearing: 0,
 	}
 }
 
-// VMetric returns the vertical metrics for the glyph with the given index.
-func (f *Font) VMetric(scale int32, i Index) VMetric {
+// GlyphVMetric returns the vertical metrics for the glyph with the given index.
+func (f *Font) GlyphVMetric(scale int32, i Index) GlyphVMetric {
 	// TODO: should 0 be bounds.YMax?
-	v := f.unscaledVMetric(i, 0)
+	v := f.unscaledGlyphVMetric(i, 0)
 	v.AdvanceHeight = f.scale(scale * v.AdvanceHeight)
 	v.TopSideBearing = f.scale(scale * v.TopSideBearing)
 	return v
