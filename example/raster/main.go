@@ -17,7 +17,8 @@ import (
 	"log"
 	"os"
 
-	"code.google.com/p/freetype-go/freetype/raster"
+	"github.com/eaburns/truefont/freetype/geom"
+	"github.com/eaburns/truefont/freetype/raster"
 )
 
 type node struct {
@@ -84,11 +85,11 @@ var inside = []node{
 	{686, 1274, -1},
 }
 
-func p(n node) raster.Point {
+func p(n node) geom.Point {
 	x, y := 20+n.x/4, 380-n.y/4
-	return raster.Point{
-		X: raster.Fix32(x * 256),
-		Y: raster.Fix32(y * 256),
+	return geom.Point{
+		X: geom.Fix32(x * 256),
+		Y: geom.Fix32(y * 256),
 	}
 }
 

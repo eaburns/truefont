@@ -1,3 +1,5 @@
+// © 2015 The truefont Authors. See AUTHORS file for a list of authors.
+//
 // Copyright 2010 The Freetype-Go Authors. All rights reserved.
 // Use of this source code is governed by your choice of either the
 // FreeType License or the GNU General Public License version 2 (or
@@ -21,7 +23,8 @@ import (
 	"math"
 	"os"
 
-	"code.google.com/p/freetype-go/freetype/raster"
+	"github.com/eaburns/truefont/freetype/geom"
+	"github.com/eaburns/truefont/freetype/raster"
 )
 
 func main() {
@@ -29,8 +32,8 @@ func main() {
 		n = 17
 		r = 256 * 80
 	)
-	s := raster.Fix32(r * math.Sqrt(2) / 2)
-	t := raster.Fix32(r * math.Tan(math.Pi/8))
+	s := geom.Fix32(r * math.Sqrt(2) / 2)
+	t := geom.Fix32(r * math.Tan(math.Pi/8))
 
 	m := image.NewRGBA(image.Rect(0, 0, 800, 600))
 	draw.Draw(m, m.Bounds(), image.NewUniform(color.RGBA{63, 63, 63, 255}), image.ZP, draw.Src)
@@ -39,37 +42,37 @@ func main() {
 	z := raster.NewRasterizer(800, 600)
 
 	for i := 0; i < n; i++ {
-		cx := raster.Fix32(25600 + 51200*(i%4))
-		cy := raster.Fix32(2560 + 32000*(i/4))
-		c := raster.Point{X: cx, Y: cy}
+		cx := geom.Fix32(25600 + 51200*(i%4))
+		cy := geom.Fix32(2560 + 32000*(i/4))
+		c := geom.Point{X: cx, Y: cy}
 		theta := math.Pi * (0.5 + 0.5*float64(i)/(n-1))
-		dx := raster.Fix32(r * math.Cos(theta))
-		dy := raster.Fix32(r * math.Sin(theta))
-		d := raster.Point{X: dx, Y: dy}
+		dx := geom.Fix32(r * math.Cos(theta))
+		dy := geom.Fix32(r * math.Sin(theta))
+		d := geom.Point{X: dx, Y: dy}
 		// Draw a quarter-circle approximated by two quadratic segments,
 		// with each segment spanning 45 degrees.
 		z.Start(c)
-		z.Add1(c.Add(raster.Point{X: r, Y: 0}))
-		z.Add2(c.Add(raster.Point{X: r, Y: t}), c.Add(raster.Point{X: s, Y: s}))
-		z.Add2(c.Add(raster.Point{X: t, Y: r}), c.Add(raster.Point{X: 0, Y: r}))
+		z.Add1(c.Add(geom.Point{X: r, Y: 0}))
+		z.Add2(c.Add(geom.Point{X: r, Y: t}), c.Add(geom.Point{X: s, Y: s}))
+		z.Add2(c.Add(geom.Point{X: t, Y: r}), c.Add(geom.Point{X: 0, Y: r}))
 		// Add another quadratic segment whose angle ranges between 0 and 90 degrees.
 		// For an explanation of the magic constants 22, 150, 181 and 256, read the
 		// comments in the freetype/raster package.
-		dot := 256 * d.Dot(raster.Point{X: 0, Y: r}) / (r * r)
-		multiple := raster.Fix32(150 - 22*(dot-181)/(256-181))
-		z.Add2(c.Add(raster.Point{X: dx, Y: r + dy}.Mul(multiple)), c.Add(d))
+		dot := 256 * d.Dot(geom.Point{X: 0, Y: r}) / (r * r)
+		multiple := geom.Fix32(150 - 22*(dot-181)/(256-181))
+		z.Add2(c.Add(geom.Point{X: dx, Y: r + dy}.Mul(multiple)), c.Add(d))
 		// Close the curve.
 		z.Add1(c)
 	}
 	z.Rasterize(mp)
 
 	for i := 0; i < n; i++ {
-		cx := raster.Fix32(25600 + 51200*(i%4))
-		cy := raster.Fix32(2560 + 32000*(i/4))
+		cx := geom.Fix32(25600 + 51200*(i%4))
+		cy := geom.Fix32(2560 + 32000*(i/4))
 		for j := 0; j < n; j++ {
 			theta := math.Pi * float64(j) / (n - 1)
-			dx := raster.Fix32(r * math.Cos(theta))
-			dy := raster.Fix32(r * math.Sin(theta))
+			dx := geom.Fix32(r * math.Cos(theta))
+			dy := geom.Fix32(r * math.Sin(theta))
 			m.Set(int((cx+dx)/256), int((cy+dy)/256), color.RGBA{255, 255, 0, 255})
 		}
 	}

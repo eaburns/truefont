@@ -1,3 +1,5 @@
+// © 2015 The truefont Authors. See AUTHORS file for a list of authors.
+//
 // Copyright 2010 The Freetype-Go Authors. All rights reserved.
 // Use of this source code is governed by your choice of either the
 // FreeType License or the GNU General Public License version 2 (or
@@ -17,7 +19,7 @@ import (
 	"log"
 	"os"
 
-	"code.google.com/p/freetype-go/freetype"
+	"github.com/eaburns/truefont/freetype"
 )
 
 var (

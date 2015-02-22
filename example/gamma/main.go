@@ -1,3 +1,5 @@
+// © 2015 The truefont Authors. See AUTHORS file for a list of authors.
+//
 // Copyright 2010 The Freetype-Go Authors. All rights reserved.
 // Use of this source code is governed by your choice of either the
 // FreeType License or the GNU General Public License version 2 (or
@@ -14,13 +16,14 @@ import (
 	"log"
 	"os"
 
-	"code.google.com/p/freetype-go/freetype/raster"
+	"github.com/eaburns/truefont/freetype/geom"
+	"github.com/eaburns/truefont/freetype/raster"
 )
 
-func p(x, y int) raster.Point {
-	return raster.Point{
-		X: raster.Fix32(x * 256),
-		Y: raster.Fix32(y * 256),
+func p(x, y int) geom.Point {
+	return geom.Point{
+		X: geom.Fix32(x * 256),
+		Y: geom.Fix32(y * 256),
 	}
 }
 

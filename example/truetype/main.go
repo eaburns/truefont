@@ -1,3 +1,5 @@
+// © 2015 The truefont Authors. See AUTHORS file for a list of authors.
+//
 // Copyright 2010 The Freetype-Go Authors. All rights reserved.
 // Use of this source code is governed by your choice of either the
 // FreeType License or the GNU General Public License version 2 (or
@@ -11,7 +13,7 @@ import (
 	"io/ioutil"
 	"log"
 
-	"code.google.com/p/freetype-go/freetype/truetype"
+	"github.com/eaburns/truefont/freetype/truetype"
 )
 
 var fontfile = flag.String("fontfile", "../../testdata/luxisr.ttf", "filename of the ttf font")

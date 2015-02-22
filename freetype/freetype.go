@@ -15,8 +15,9 @@ import (
 	"image"
 	"image/draw"
 
-	"code.google.com/p/freetype-go/freetype/raster"
-	"code.google.com/p/freetype-go/freetype/truetype"
+	"github.com/eaburns/truefont/freetype/geom"
+	"github.com/eaburns/truefont/freetype/raster"
+	"github.com/eaburns/truefont/freetype/truetype"
 )
 
 // These constants determine the size of the glyph cache. The cache is keyed
@@ -35,7 +36,7 @@ const (
 type cacheEntry struct {
 	valid        bool
 	glyph        truetype.Index
-	advanceWidth raster.Fix32
+	advanceWidth geom.Fix32
 	mask         *image.Alpha
 	offset       image.Point
 }
@@ -47,12 +48,12 @@ func ParseFont(b []byte) (*truetype.Font, error) {
 	return truetype.Parse(b)
 }
 
-// Pt converts from a co-ordinate pair measured in pixels to a raster.Point
-// co-ordinate pair measured in raster.Fix32 units.
-func Pt(x, y int) raster.Point {
-	return raster.Point{
-		X: raster.Fix32(x << 8),
-		Y: raster.Fix32(y << 8),
+// Pt converts from a co-ordinate pair measured in pixels to a geom.Point
+// co-ordinate pair measured in geom.Fix32 units.
+func Pt(x, y int) geom.Point {
+	return geom.Point{
+		X: geom.Fix32(x << 8),
+		Y: geom.Fix32(y << 8),
 	}
 }
 
@@ -87,28 +88,28 @@ type Context struct {
 
 // PointToFix32 converts the given number of points (as in ``a 12 point font'')
 // into fixed point units.
-func (c *Context) PointToFix32(x float64) raster.Fix32 {
-	return raster.Fix32(x * float64(c.dpi) * (256.0 / 72.0))
+func (c *Context) PointToFix32(x float64) geom.Fix32 {
+	return geom.Fix32(x * float64(c.dpi) * (256.0 / 72.0))
 }
 
 // drawContour draws the given closed contour with the given offset.
-func (c *Context) drawContour(ps []truetype.Point, dx, dy raster.Fix32) {
+func (c *Context) drawContour(ps []truetype.Point, dx, dy geom.Fix32) {
 	if len(ps) == 0 {
 		return
 	}
 	// ps[0] is a truetype.Point measured in FUnits and positive Y going upwards.
 	// start is the same thing measured in fixed point units and positive Y
 	// going downwards, and offset by (dx, dy)
-	start := raster.Point{
-		X: dx + raster.Fix32(ps[0].X<<2),
-		Y: dy - raster.Fix32(ps[0].Y<<2),
+	start := geom.Point{
+		X: dx + geom.Fix32(ps[0].X<<2),
+		Y: dy - geom.Fix32(ps[0].Y<<2),
 	}
 	c.r.Start(start)
 	q0, on0 := start, true
 	for _, p := range ps[1:] {
-		q := raster.Point{
-			X: dx + raster.Fix32(p.X<<2),
-			Y: dy - raster.Fix32(p.Y<<2),
+		q := geom.Point{
+			X: dx + geom.Fix32(p.X<<2),
+			Y: dy - geom.Fix32(p.Y<<2),
 		}
 		on := p.Flags&0x01 != 0
 		if on {
@@ -121,7 +122,7 @@ func (c *Context) drawContour(ps []truetype.Point, dx, dy raster.Fix32) {
 			if on0 {
 				// No-op.
 			} else {
-				mid := raster.Point{
+				mid := geom.Point{
 					X: (q0.X + q.X) / 2,
 					Y: (q0.Y + q.Y) / 2,
 				}
@@ -141,17 +142,17 @@ func (c *Context) drawContour(ps []truetype.Point, dx, dy raster.Fix32) {
 // rasterize returns the advance width, glyph mask and integer-pixel offset
 // to render the given glyph at the given sub-pixel offsets.
 // The 24.8 fixed point arguments fx and fy must be in the range [0, 1).
-func (c *Context) rasterize(glyph truetype.Index, fx, fy raster.Fix32) (
-	raster.Fix32, *image.Alpha, image.Point, error) {
+func (c *Context) rasterize(glyph truetype.Index, fx, fy geom.Fix32) (
+	geom.Fix32, *image.Alpha, image.Point, error) {
 
 	if err := c.glyphBuf.Load(c.font, c.scale, glyph, truetype.Hinting(c.hinting)); err != nil {
 		return 0, nil, image.Point{}, err
 	}
 	// Calculate the integer-pixel bounds for the glyph.
-	xmin := int(fx+raster.Fix32(c.glyphBuf.B.XMin<<2)) >> 8
-	ymin := int(fy-raster.Fix32(c.glyphBuf.B.YMax<<2)) >> 8
-	xmax := int(fx+raster.Fix32(c.glyphBuf.B.XMax<<2)+0xff) >> 8
-	ymax := int(fy-raster.Fix32(c.glyphBuf.B.YMin<<2)+0xff) >> 8
+	xmin := int(fx+geom.Fix32(c.glyphBuf.B.XMin<<2)) >> 8
+	ymin := int(fy-geom.Fix32(c.glyphBuf.B.YMax<<2)) >> 8
+	xmax := int(fx+geom.Fix32(c.glyphBuf.B.XMax<<2)+0xff) >> 8
+	ymax := int(fy-geom.Fix32(c.glyphBuf.B.YMin<<2)+0xff) >> 8
 	if xmin > xmax || ymin > ymax {
 		return 0, nil, image.Point{}, errors.New("freetype: negative sized glyph")
 	}
@@ -160,8 +161,8 @@ func (c *Context) rasterize(glyph truetype.Index, fx, fy raster.Fix32) (
 	// are the pixel offsets, based on the font's FUnit metrics, that let
 	// a negative co-ordinate in TrueType space be non-negative in
 	// rasterizer space. xmin and ymin are typically <= 0.
-	fx += raster.Fix32(-xmin << 8)
-	fy += raster.Fix32(-ymin << 8)
+	fx += geom.Fix32(-xmin << 8)
+	fy += geom.Fix32(-ymin << 8)
 	// Rasterize the glyph's vectors.
 	c.r.Clear()
 	e0 := 0
@@ -171,15 +172,15 @@ func (c *Context) rasterize(glyph truetype.Index, fx, fy raster.Fix32) (
 	}
 	a := image.NewAlpha(image.Rect(0, 0, xmax-xmin, ymax-ymin))
 	c.r.Rasterize(raster.NewAlphaSrcPainter(a))
-	return raster.Fix32(c.glyphBuf.AdvanceWidth << 2), a, image.Point{xmin, ymin}, nil
+	return geom.Fix32(c.glyphBuf.AdvanceWidth << 2), a, image.Point{xmin, ymin}, nil
 }
 
 // glyph returns the advance width, glyph mask and integer-pixel offset to
 // render the given glyph at the given sub-pixel point. It is a cache for the
 // rasterize method. Unlike rasterize, p's co-ordinates do not have to be in
 // the range [0, 1).
-func (c *Context) glyph(glyph truetype.Index, p raster.Point) (
-	raster.Fix32, *image.Alpha, image.Point, error) {
+func (c *Context) glyph(glyph truetype.Index, p geom.Point) (
+	geom.Fix32, *image.Alpha, image.Point, error) {
 
 	// Split p.X and p.Y into their integer and fractional parts.
 	ix, fx := int(p.X>>8), p.X&0xff
@@ -208,16 +209,16 @@ func (c *Context) glyph(glyph truetype.Index, p raster.Point) (
 // above and to the right of the point, but some may be below or to the left.
 // For example, drawing a string that starts with a 'J' in an italic font may
 // affect pixels below and left of the point.
-// p is a raster.Point and can therefore represent sub-pixel positions.
-func (c *Context) DrawString(s string, p raster.Point) (raster.Point, error) {
+// p is a geom.Point and can therefore represent sub-pixel positions.
+func (c *Context) DrawString(s string, p geom.Point) (geom.Point, error) {
 	if c.font == nil {
-		return raster.Point{}, errors.New("freetype: DrawText called with a nil font")
+		return geom.Point{}, errors.New("freetype: DrawText called with a nil font")
 	}
 	prev, hasPrev := truetype.Index(0), false
 	for _, rune := range s {
 		index := c.font.Index(rune)
 		if hasPrev {
-			kern := raster.Fix32(c.font.Kerning(c.scale, prev, index)) << 2
+			kern := geom.Fix32(c.font.Kerning(c.scale, prev, index)) << 2
 			if c.hinting != NoHinting {
 				kern = (kern + 128) &^ 255
 			}
@@ -225,7 +226,7 @@ func (c *Context) DrawString(s string, p raster.Point) (raster.Point, error) {
 		}
 		advanceWidth, mask, offset, err := c.glyph(index, p)
 		if err != nil {
-			return raster.Point{}, err
+			return geom.Point{}, err
 		}
 		p.X += advanceWidth
 		glyphRect := mask.Bounds().Add(offset)
