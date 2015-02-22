@@ -5,18 +5,6 @@
 
 package truetype
 
-// Hinting is the policy for snapping a glyph's contours to pixel boundaries.
-type Hinting int32
-
-const (
-	// NoHinting means to not perform any hinting.
-	NoHinting Hinting = iota
-	// FullHinting means to use the font's hinting instructions.
-	FullHinting
-
-	// TODO: implement VerticalHinting.
-)
-
 // A Point is a co-ordinate pair plus whether it is ``on'' a contour or an
 // ``off'' control point.
 type Point struct {
@@ -44,10 +32,8 @@ type GlyphBuf struct {
 	// is interpreted to mean zero.
 	End []int
 
-	font    *Font
-	scale   int32
-	hinting Hinting
-	hinter  hinter
+	font  *Font
+	scale int32
 	// phantomPoints are the co-ordinates of the synthetic phantom points
 	// used for hinting and bounding box calculations.
 	phantomPoints [4]Point
@@ -87,23 +73,17 @@ const (
 // Load loads a glyph's contours from a Font, overwriting any previously
 // loaded contours for this GlyphBuf. scale is the number of 26.6 fixed point
 // units in 1 em, i is the glyph index, and h is the hinting policy.
-func (g *GlyphBuf) Load(f *Font, scale int32, i Index, h Hinting) error {
+func (g *GlyphBuf) Load(f *Font, scale int32, i Index) error {
 	g.Point = g.Point[:0]
 	g.Unhinted = g.Unhinted[:0]
 	g.InFontUnits = g.InFontUnits[:0]
 	g.End = g.End[:0]
 	g.font = f
-	g.hinting = h
 	g.scale = scale
 	g.pp1x = 0
 	g.phantomPoints = [4]Point{}
 	g.metricsSet = false
 
-	if h != NoHinting {
-		if err := g.hinter.init(f, scale); err != nil {
-			return err
-		}
-	}
 	if err := g.load(0, i, true); err != nil {
 		return err
 	}
@@ -111,9 +91,6 @@ func (g *GlyphBuf) Load(f *Font, scale int32, i Index, h Hinting) error {
 	// and should be cleaned up once we have all the testScaling tests passing,
 	// plus additional tests for Freetype-Go's bounding boxes matching C Freetype's.
 	pp1x := g.pp1x
-	if h != NoHinting {
-		pp1x = g.phantomPoints[0].X
-	}
 	if pp1x != 0 {
 		for i := range g.Point {
 			g.Point[i].X -= pp1x
@@ -121,19 +98,6 @@ func (g *GlyphBuf) Load(f *Font, scale int32, i Index, h Hinting) error {
 	}
 
 	advanceWidth := g.phantomPoints[1].X - g.phantomPoints[0].X
-	if h != NoHinting {
-		if len(f.hdmx) >= 8 {
-			if n := u32(f.hdmx, 4); n > 3+uint32(i) {
-				for hdmx := f.hdmx[8:]; uint32(len(hdmx)) >= n; hdmx = hdmx[n:] {
-					if int32(hdmx[0]) == scale>>6 {
-						advanceWidth = int32(hdmx[2+i]) << 6
-						break
-					}
-				}
-			}
-		}
-		advanceWidth = (advanceWidth + 32) &^ 63
-	}
 	g.AdvanceWidth = advanceWidth
 
 	// Set g.B to the 'control box', which is the bounding box of the Bézier
@@ -161,15 +125,6 @@ func (g *GlyphBuf) Load(f *Font, scale int32, i Index, h Hinting) error {
 			} else if g.B.YMax < p.Y {
 				g.B.YMax = p.Y
 			}
-		}
-		// Snap the box to the grid, if hinting is on.
-		if h != NoHinting {
-			g.B.XMin &^= 63
-			g.B.YMin &^= 63
-			g.B.XMax += 63
-			g.B.XMax &^= 63
-			g.B.YMax += 63
-			g.B.YMax &^= 63
 		}
 	}
 	return nil
@@ -230,26 +185,9 @@ func (g *GlyphBuf) load(recursion int32, i Index, useMyMetrics bool) (err error)
 		}
 	} else {
 		np0, ne0 := len(g.Point), len(g.End)
-		program := g.loadSimple(glyf, ne)
+		g.loadSimple(glyf, ne)
 		g.addPhantomsAndScale(np0, np0, true, true)
 		pp1x = g.Point[len(g.Point)-4].X
-		if g.hinting != NoHinting {
-			if len(program) != 0 {
-				err := g.hinter.run(
-					program,
-					g.Point[np0:],
-					g.Unhinted[np0:],
-					g.InFontUnits[np0:],
-					g.End[ne0:],
-				)
-				if err != nil {
-					return err
-				}
-			}
-			// Drop the four phantom points.
-			g.InFontUnits = g.InFontUnits[:len(g.InFontUnits)-4]
-			g.Unhinted = g.Unhinted[:len(g.Unhinted)-4]
-		}
 		if useMyMetrics {
 			copy(g.phantomPoints[:], g.Point[len(g.Point)-4:])
 		}
@@ -363,7 +301,7 @@ func (g *GlyphBuf) loadCompound(recursion int32, uhm HMetric, i Index,
 		flagUseMyMetrics
 		flagOverlapCompound
 	)
-	np0, ne0 := len(g.Point), len(g.End)
+	np0 := len(g.Point)
 	offset := loadOffset
 	for {
 		flags := u16(glyf, offset)
@@ -436,44 +374,11 @@ func (g *GlyphBuf) loadCompound(recursion int32, uhm HMetric, i Index,
 		}
 	}
 
-	instrLen := 0
-	if g.hinting != NoHinting && offset+2 <= len(glyf) {
-		instrLen = int(u16(glyf, offset))
-		offset += 2
-	}
-
-	g.addPhantomsAndScale(np0, len(g.Point), false, instrLen > 0)
-	points, ends := g.Point[np0:], g.End[ne0:]
+	g.addPhantomsAndScale(np0, len(g.Point), false, false)
+	points := g.Point[np0:]
 	g.Point = g.Point[:len(g.Point)-4]
 	for j := range points {
 		points[j].Flags &^= flagTouchedX | flagTouchedY
-	}
-
-	if instrLen == 0 {
-		if !g.metricsSet {
-			copy(g.phantomPoints[:], points[len(points)-4:])
-		}
-		return nil
-	}
-
-	// Hint the compound glyph.
-	program := glyf[offset : offset+instrLen]
-	// Temporarily adjust the ends to be relative to this compound glyph.
-	if np0 != 0 {
-		for i := range ends {
-			ends[i] -= np0
-		}
-	}
-	// Hinting instructions of a composite glyph completely refer to the
-	// (already) hinted subglyphs.
-	g.tmp = append(g.tmp[:0], points...)
-	if err := g.hinter.run(program, points, g.tmp, g.tmp, ends); err != nil {
-		return err
-	}
-	if np0 != 0 {
-		for i := range ends {
-			ends[i] += np0
-		}
 	}
 	if !g.metricsSet {
 		copy(g.phantomPoints[:], points[len(points)-4:])
@@ -485,38 +390,11 @@ func (g *GlyphBuf) addPhantomsAndScale(np0, np1 int, simple, adjust bool) {
 	// Add the four phantom points.
 	g.Point = append(g.Point, g.phantomPoints[:]...)
 	// Scale the points.
-	if simple && g.hinting != NoHinting {
-		g.InFontUnits = append(g.InFontUnits, g.Point[np1:]...)
-	}
 	for i := np1; i < len(g.Point); i++ {
 		p := &g.Point[i]
 		p.X = g.font.scale(g.scale * p.X)
 		p.Y = g.font.scale(g.scale * p.Y)
 	}
-	if g.hinting == NoHinting {
-		return
-	}
-	// Round the 1st phantom point to the grid, shifting all other points equally.
-	// Note that "all other points" starts from np0, not np1.
-	// TODO: delete this adjustment and the np0/np1 distinction, when
-	// we update the compatibility tests to C Freetype 2.5.3.
-	// See http://git.savannah.gnu.org/cgit/freetype/freetype2.git/commit/?id=05c786d990390a7ca18e62962641dac740bacb06
-	if adjust {
-		pp1x := g.Point[len(g.Point)-4].X
-		if dx := ((pp1x + 32) &^ 63) - pp1x; dx != 0 {
-			for i := np0; i < len(g.Point); i++ {
-				g.Point[i].X += dx
-			}
-		}
-	}
-	if simple {
-		g.Unhinted = append(g.Unhinted, g.Point[np1:]...)
-	}
-	// Round the 2nd and 4th phantom point to the grid.
-	p := &g.Point[len(g.Point)-3]
-	p.X = (p.X + 32) &^ 63
-	p = &g.Point[len(g.Point)-1]
-	p.Y = (p.Y + 32) &^ 63
 }
 
 // TODO: is this necessary? The zero-valued GlyphBuf is perfectly usable.
