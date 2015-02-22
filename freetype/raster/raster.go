@@ -1,9 +1,11 @@
+// © 2015 The truefont Authors. See AUTHORS file for a list of authors.
+//
 // Copyright 2010 The Freetype-Go Authors. All rights reserved.
 // Use of this source code is governed by your choice of either the
 // FreeType License or the GNU General Public License version 2 (or
 // any later version), both of which can be found in the LICENSE file.
 
-// The raster package provides an anti-aliasing 2-D rasterizer.
+// Package raster provides an anti-aliasing 2-D rasterizer.
 //
 // It is part of the larger Freetype-Go suite of font-related packages,
 // but the raster package is not specific to font rasterization, and can
@@ -17,6 +19,8 @@ package raster
 
 import (
 	"strconv"
+
+	"github.com/eaburns/truefont/freetype/geom"
 )
 
 // A cell is part of a linked list (for a given yi co-ordinate) of accumulated
@@ -27,6 +31,7 @@ type cell struct {
 	next        int
 }
 
+// A Rasterizer performs 2-D anti-aliased rasterizing to images.
 type Rasterizer struct {
 	// If false, the default behavior is to use the even-odd winding fill
 	// rule during Rasterize.
@@ -41,7 +46,7 @@ type Rasterizer struct {
 	splitScale2, splitScale3 int
 
 	// The current pen position.
-	a Point
+	a geom.Point
 	// The current cell and its area/coverage being accumulated.
 	xi, yi      int
 	area, cover int
@@ -116,12 +121,12 @@ func (r *Rasterizer) setCell(xi, yi int) {
 // scan accumulates area/coverage for the yi'th scanline, going from
 // x0 to x1 in the horizontal direction (in 24.8 fixed point co-ordinates)
 // and from y0f to y1f fractional vertical units within that scanline.
-func (r *Rasterizer) scan(yi int, x0, y0f, x1, y1f Fix32) {
+func (r *Rasterizer) scan(yi int, x0, y0f, x1, y1f geom.Fix32) {
 	// Break the 24.8 fixed point X co-ordinates into integral and fractional parts.
 	x0i := int(x0) / 256
-	x0f := x0 - Fix32(256*x0i)
+	x0f := x0 - geom.Fix32(256*x0i)
 	x1i := int(x1) / 256
-	x1f := x1 - Fix32(256*x1i)
+	x1f := x1 - geom.Fix32(256*x1i)
 
 	// A perfectly horizontal scan.
 	if y0f == y1f {
@@ -139,7 +144,7 @@ func (r *Rasterizer) scan(yi int, x0, y0f, x1, y1f Fix32) {
 	// all intermediate cells go through the full width of the cell,
 	// or 256 units in 24.8 fixed point format.
 	var (
-		p, q, edge0, edge1 Fix32
+		p, q, edge0, edge1 geom.Fix32
 		xiDelta            int
 	)
 	if dx > 0 {
@@ -151,7 +156,7 @@ func (r *Rasterizer) scan(yi int, x0, y0f, x1, y1f Fix32) {
 	}
 	yDelta, yRem := p/q, p%q
 	if yRem < 0 {
-		yDelta -= 1
+		yDelta--
 		yRem += q
 	}
 	// Do the first cell.
@@ -165,7 +170,7 @@ func (r *Rasterizer) scan(yi int, x0, y0f, x1, y1f Fix32) {
 		p = 256 * (y1f - y + yDelta)
 		fullDelta, fullRem := p/q, p%q
 		if fullRem < 0 {
-			fullDelta -= 1
+			fullDelta--
 			fullRem += q
 		}
 		yRem -= q
@@ -173,7 +178,7 @@ func (r *Rasterizer) scan(yi int, x0, y0f, x1, y1f Fix32) {
 			yDelta = fullDelta
 			yRem += fullRem
 			if yRem >= 0 {
-				yDelta += 1
+				yDelta++
 				yRem -= q
 			}
 			r.area += int(256 * yDelta)
@@ -189,21 +194,21 @@ func (r *Rasterizer) scan(yi int, x0, y0f, x1, y1f Fix32) {
 }
 
 // Start starts a new curve at the given point.
-func (r *Rasterizer) Start(a Point) {
+func (r *Rasterizer) Start(a geom.Point) {
 	r.setCell(int(a.X/256), int(a.Y/256))
 	r.a = a
 }
 
 // Add1 adds a linear segment to the current curve.
-func (r *Rasterizer) Add1(b Point) {
+func (r *Rasterizer) Add1(b geom.Point) {
 	x0, y0 := r.a.X, r.a.Y
 	x1, y1 := b.X, b.Y
 	dx, dy := x1-x0, y1-y0
 	// Break the 24.8 fixed point Y co-ordinates into integral and fractional parts.
 	y0i := int(y0) / 256
-	y0f := y0 - Fix32(256*y0i)
+	y0f := y0 - geom.Fix32(256*y0i)
 	y1i := int(y1) / 256
-	y1f := y1 - Fix32(256*y1i)
+	y1f := y1 - geom.Fix32(256*y1i)
 
 	if y0i == y1i {
 		// There is only one scanline.
@@ -213,7 +218,7 @@ func (r *Rasterizer) Add1(b Point) {
 		// This is a vertical line segment. We avoid calling r.scan and instead
 		// manipulate r.area and r.cover directly.
 		var (
-			edge0, edge1 Fix32
+			edge0, edge1 geom.Fix32
 			yiDelta      int
 		)
 		if dy > 0 {
@@ -250,7 +255,7 @@ func (r *Rasterizer) Add1(b Point) {
 		// all intermediate scanlines go through the full height of the row, or 256
 		// units in 24.8 fixed point format.
 		var (
-			p, q, edge0, edge1 Fix32
+			p, q, edge0, edge1 geom.Fix32
 			yiDelta            int
 		)
 		if dy > 0 {
@@ -262,7 +267,7 @@ func (r *Rasterizer) Add1(b Point) {
 		}
 		xDelta, xRem := p/q, p%q
 		if xRem < 0 {
-			xDelta -= 1
+			xDelta--
 			xRem += q
 		}
 		// Do the first scanline.
@@ -275,7 +280,7 @@ func (r *Rasterizer) Add1(b Point) {
 			p = 256 * dx
 			fullDelta, fullRem := p/q, p%q
 			if fullRem < 0 {
-				fullDelta -= 1
+				fullDelta--
 				fullRem += q
 			}
 			xRem -= q
@@ -283,7 +288,7 @@ func (r *Rasterizer) Add1(b Point) {
 				xDelta = fullDelta
 				xRem += fullRem
 				if xRem >= 0 {
-					xDelta += 1
+					xDelta++
 					xRem -= q
 				}
 				r.scan(yi, x, edge0, x+xDelta, edge1)
@@ -299,10 +304,10 @@ func (r *Rasterizer) Add1(b Point) {
 }
 
 // Add2 adds a quadratic segment to the current curve.
-func (r *Rasterizer) Add2(b, c Point) {
+func (r *Rasterizer) Add2(b, c geom.Point) {
 	// Calculate nSplit (the number of recursive decompositions) based on how `curvy' it is.
 	// Specifically, how much the middle point b deviates from (a+c)/2.
-	dev := maxAbs(r.a.X-2*b.X+c.X, r.a.Y-2*b.Y+c.Y) / Fix32(r.splitScale2)
+	dev := geom.MaxAbs(r.a.X-2*b.X+c.X, r.a.Y-2*b.Y+c.Y) / geom.Fix32(r.splitScale2)
 	nsplit := 0
 	for dev > 0 {
 		dev /= 4
@@ -315,7 +320,7 @@ func (r *Rasterizer) Add2(b, c Point) {
 	}
 	// Recursively decompose the curve nSplit levels deep.
 	var (
-		pStack [2*maxNsplit + 3]Point
+		pStack [2*maxNsplit + 3]geom.Point
 		sStack [maxNsplit + 1]int
 		i      int
 	)
@@ -347,7 +352,7 @@ func (r *Rasterizer) Add2(b, c Point) {
 			// Replace the level-0 quadratic with a two-linear-piece approximation.
 			midx := (p[0].X + 2*p[1].X + p[2].X) / 4
 			midy := (p[0].Y + 2*p[1].Y + p[2].Y) / 4
-			r.Add1(Point{midx, midy})
+			r.Add1(geom.Pt(midx, midy))
 			r.Add1(p[0])
 			i--
 		}
@@ -355,10 +360,10 @@ func (r *Rasterizer) Add2(b, c Point) {
 }
 
 // Add3 adds a cubic segment to the current curve.
-func (r *Rasterizer) Add3(b, c, d Point) {
+func (r *Rasterizer) Add3(b, c, d geom.Point) {
 	// Calculate nSplit (the number of recursive decompositions) based on how `curvy' it is.
-	dev2 := maxAbs(r.a.X-3*(b.X+c.X)+d.X, r.a.Y-3*(b.Y+c.Y)+d.Y) / Fix32(r.splitScale2)
-	dev3 := maxAbs(r.a.X-2*b.X+d.X, r.a.Y-2*b.Y+d.Y) / Fix32(r.splitScale3)
+	dev2 := geom.MaxAbs(r.a.X-3*(b.X+c.X)+d.X, r.a.Y-3*(b.Y+c.Y)+d.Y) / geom.Fix32(r.splitScale2)
+	dev3 := geom.MaxAbs(r.a.X-2*b.X+d.X, r.a.Y-2*b.Y+d.Y) / geom.Fix32(r.splitScale3)
 	nsplit := 0
 	for dev2 > 0 || dev3 > 0 {
 		dev2 /= 8
@@ -372,7 +377,7 @@ func (r *Rasterizer) Add3(b, c, d Point) {
 	}
 	// Recursively decompose the curve nSplit levels deep.
 	var (
-		pStack [3*maxNsplit + 4]Point
+		pStack [3*maxNsplit + 4]geom.Point
 		sStack [maxNsplit + 1]int
 		i      int
 	)
@@ -413,7 +418,7 @@ func (r *Rasterizer) Add3(b, c, d Point) {
 			// Replace the level-0 cubic with a two-linear-piece approximation.
 			midx := (p[0].X + 3*(p[1].X+p[2].X) + p[3].X) / 8
 			midy := (p[0].Y + 3*(p[1].Y+p[2].Y) + p[3].Y) / 8
-			r.Add1(Point{midx, midy})
+			r.Add1(geom.Pt(midx, midy))
 			r.Add1(p[0])
 			i--
 		}
@@ -425,16 +430,16 @@ func (r *Rasterizer) AddPath(p Path) {
 	for i := 0; i < len(p); {
 		switch p[i] {
 		case 0:
-			r.Start(Point{p[i+1], p[i+2]})
+			r.Start(geom.Pt(p[i+1], p[i+2]))
 			i += 4
 		case 1:
-			r.Add1(Point{p[i+1], p[i+2]})
+			r.Add1(geom.Pt(p[i+1], p[i+2]))
 			i += 4
 		case 2:
-			r.Add2(Point{p[i+1], p[i+2]}, Point{p[i+3], p[i+4]})
+			r.Add2(geom.Pt(p[i+1], p[i+2]), geom.Pt(p[i+3], p[i+4]))
 			i += 6
 		case 3:
-			r.Add3(Point{p[i+1], p[i+2]}, Point{p[i+3], p[i+4]}, Point{p[i+5], p[i+6]})
+			r.Add3(geom.Pt(p[i+1], p[i+2]), geom.Pt(p[i+3], p[i+4]), geom.Pt(p[i+5], p[i+6]))
 			i += 8
 		default:
 			panic("freetype/raster: bad path")
@@ -443,7 +448,7 @@ func (r *Rasterizer) AddPath(p Path) {
 }
 
 // AddStroke adds a stroked Path.
-func (r *Rasterizer) AddStroke(q Path, width Fix32, cr Capper, jr Joiner) {
+func (r *Rasterizer) AddStroke(q Path, width geom.Fix32, cr Capper, jr Joiner) {
 	Stroke(r, q, width, cr, jr)
 }
 
@@ -529,7 +534,7 @@ func (r *Rasterizer) Rasterize(p Painter) {
 
 // Clear cancels any previous calls to r.Start or r.AddXxx.
 func (r *Rasterizer) Clear() {
-	r.a = Point{0, 0}
+	r.a = geom.Pt(0, 0)
 	r.xi = 0
 	r.yi = 0
 	r.area = 0
@@ -541,7 +546,7 @@ func (r *Rasterizer) Clear() {
 }
 
 // SetBounds sets the maximum width and height of the rasterized image and
-// calls Clear. The width and height are in pixels, not Fix32 units.
+// calls Clear. The width and height are in pixels, not geom.Fix32 units.
 func (r *Rasterizer) SetBounds(width, height int) {
 	if width < 0 {
 		width = 0
