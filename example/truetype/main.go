@@ -60,7 +60,7 @@ func main() {
 	c0, c1 := 'A', 'V'
 
 	i0 := font.Index(c0)
-	hm := font.HMetric(fupe, i0)
+	hm := font.GlyphHMetric(fupe, i0)
 	g := truetype.NewGlyphBuf()
 	err = g.Load(font, fupe, i0)
 	if err != nil {

@@ -46,17 +46,20 @@ func TestParse(t *testing.T) {
 	if got, want := font.Bounds(fupe), (Bounds{-441, -432, 2024, 2033}); got != want {
 		t.Errorf("Bounds: got %v, want %v", got, want)
 	}
+	if got, want := font.HMetric(fupe), (FontHMetric{Ascent: 2033, Descent: -432, LineGap: 0}); got != want {
+		t.Errorf("HMetric: got %v, want %v", got, want)
+	}
 
 	i0 := font.Index('A')
 	i1 := font.Index('V')
 	if i0 != 36 || i1 != 57 {
 		t.Fatalf("Index: i0, i1 = %d, %d, want 36, 57", i0, i1)
 	}
-	if got, want := font.HMetric(fupe, i0), (HMetric{1366, 19}); got != want {
-		t.Errorf("HMetric: got %v, want %v", got, want)
+	if got, want := font.GlyphHMetric(fupe, i0), (GlyphHMetric{1366, 19}); got != want {
+		t.Errorf("GlyphHMetric: got %v, want %v", got, want)
 	}
-	if got, want := font.VMetric(fupe, i0), (VMetric{2465, 553}); got != want {
-		t.Errorf("VMetric: got %v, want %v", got, want)
+	if got, want := font.GlyphVMetric(fupe, i0), (GlyphVMetric{2465, 553}); got != want {
+		t.Errorf("GlyphVMetric: got %v, want %v", got, want)
 	}
 	if got, want := font.Kerning(fupe, i0, i1), int32(-144); got != want {
 		t.Errorf("Kerning: got %v, want %v", got, want)

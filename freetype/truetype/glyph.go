@@ -159,8 +159,8 @@ func (g *GlyphBuf) load(recursion int32, i Index, useMyMetrics bool) (err error)
 	}
 
 	// Create the phantom points.
-	uhm, pp1x := g.font.unscaledHMetric(i), int32(0)
-	uvm := g.font.unscaledVMetric(i, boundsYMax)
+	uhm, pp1x := g.font.unscaledGlyphHMetric(i), int32(0)
+	uvm := g.font.unscaledGlyphVMetric(i, boundsYMax)
 	g.phantomPoints = [4]Point{
 		{X: boundsXMin - uhm.LeftSideBearing},
 		{X: boundsXMin - uhm.LeftSideBearing + uhm.AdvanceWidth},
@@ -285,7 +285,7 @@ func (g *GlyphBuf) loadSimple(glyf []byte, ne int) (program []byte) {
 	return program
 }
 
-func (g *GlyphBuf) loadCompound(recursion int32, uhm HMetric, i Index,
+func (g *GlyphBuf) loadCompound(recursion int32, uhm GlyphHMetric, i Index,
 	glyf []byte, useMyMetrics bool) error {
 
 	// Flags for decoding a compound glyph. These flags are documented at
