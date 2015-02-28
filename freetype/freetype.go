@@ -200,17 +200,30 @@ func (c *Context) glyph(glyph truetype.Index, p geom.Point) (
 // affect pixels below and left of the point.
 // p is a geom.Point and can therefore represent sub-pixel positions.
 func (c *Context) DrawString(s string, p geom.Point) (geom.Point, error) {
+	var glyphs []truetype.Index
+	for _, r := range s {
+		glyphs = append(glyphs, c.font.Index(r))
+	}
+	return c.DrawGlyphs(glyphs, p)
+}
+
+// DrawGlyphs draws glyphs at p and returns p advanced by the text extent. The text
+// is placed so that the left edge of the em square of the first character of s
+// and the baseline intersect at p. The majority of the affected pixels will be
+// above and to the right of the point, but some may be below or to the left.
+// For example, drawing a string that starts with a 'J' in an italic font may
+// affect pixels below and left of the point.
+// p is a geom.Point and can therefore represent sub-pixel positions.
+func (c *Context) DrawGlyphs(glyphs []truetype.Index, p geom.Point) (geom.Point, error) {
 	if c.font == nil {
 		return geom.Point{}, errors.New("freetype: DrawText called with a nil font")
 	}
-	prev, hasPrev := truetype.Index(0), false
-	for _, rune := range s {
-		index := c.font.Index(rune)
-		if hasPrev {
-			kern := geom.Fix32(c.font.Kerning(c.scale, prev, index)) << 2
+	for i, g := range glyphs {
+		if i > 0 {
+			kern := geom.Fix32(c.font.Kerning(c.scale, glyphs[i-1], g)) << 2
 			p.X += kern
 		}
-		advanceWidth, mask, offset, err := c.glyph(index, p)
+		advanceWidth, mask, offset, err := c.glyph(g, p)
 		if err != nil {
 			return geom.Point{}, err
 		}
@@ -221,7 +234,6 @@ func (c *Context) DrawString(s string, p geom.Point) (geom.Point, error) {
 			mp := image.Point{0, dr.Min.Y - glyphRect.Min.Y}
 			draw.DrawMask(c.dst, dr, c.src, image.ZP, mask, mp, draw.Over)
 		}
-		prev, hasPrev = index, true
 	}
 	return p, nil
 }
